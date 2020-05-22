@@ -108,11 +108,11 @@ bool handlePopStateChanges(int lvl)
     switch(popState) {
       case LOW_NOISE_B4_POP:
         // whilst in this state, count low noise
-        if (lvl<5) {
+        if (lvl<VOL_THRESHOLD_1) {
           countLowNoise++;
         }
         else {
-          // change to counting pops, if lvl is above 5 and low noise count is above threshold
+          // change to counting pops, if lvl is above VOL_THRESHOLD_1 and low noise count is above threshold
           if ((countLowNoise > LOW_NOISE_START) & (lvl > VOL_THRESHOLD_1)) {
             popState=COUNT_POP;
             countPop=1; // had one count to start
@@ -125,7 +125,7 @@ bool handlePopStateChanges(int lvl)
 
       case COUNT_POP:
         // whilst in this state, increment pop counts
-        if (lvl > 5) {
+        if (lvl > VOL_THRESHOLD_1) {
           countPop++;
         }
         
@@ -136,7 +136,7 @@ bool handlePopStateChanges(int lvl)
         }
         else {
           // if low noise, revert to start
-          if (lvl<5) popState=LOW_NOISE_B4_POP;
+          if (lvl<VOL_THRESHOLD_1) popState=LOW_NOISE_B4_POP;
         }
 
         // always reset the low noise count
