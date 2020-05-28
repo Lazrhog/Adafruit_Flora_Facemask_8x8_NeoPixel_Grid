@@ -27,6 +27,7 @@ void clear() {
   for(int i=0;i<64;i++){
     pixels.setPixelColor(i, pixels.Color(0,0,0));
   }
+  pixels.show();
 }
 
 void setPixelForColor(int row, int col, uint32_t color) {
@@ -84,11 +85,12 @@ void drawShape(byte shape[], uint32_t color) {
 #define LOW_NOISE_START 150
 #define LOW_NOISE_DELAY_AFTER_POP 50
 #define SMILE_FOR_A_WHILE 750
+#define MAX_POWER_OFF_TIME 500
 
 // these thresholds will need to be tuned for how close the microphone will be
-#define VOL_THRESHOLD_1 5
-#define VOL_THRESHOLD_2 12
-#define VOL_THRESHOLD_3 20
+#define VOL_THRESHOLD_1 25
+#define VOL_THRESHOLD_2 40
+#define VOL_THRESHOLD_3 60
 
 // global data declarations
 typedef enum {LOW_NOISE_B4_POP=0, COUNT_POP=1, LOW_NOISE_AFTER_POP=2} pop_state_type;   // state machine state definitions
@@ -96,7 +98,7 @@ int countLowNoise=0,countPop=0;   // counters for the pop state machine
 int smileTimer=0;   // timer for the smile when it appears
 pop_state_type popState=LOW_NOISE_B4_POP;  // State machine handling 'pop' detection for the smile
 int lvl=0;  // Current "dampened" audio level
-
+int powerConserveTimer=MAX_POWER_OFF_TIME;
 
 // State machine function that detects a pop, essentially a period of low noise, a small burst of noise, followed by low noise again
 bool handlePopStateChanges(int lvl)
@@ -182,21 +184,41 @@ void loop() {
     smileTimer = MAX(0, smileTimer-1);
   }
   else {
-    // otherwise process talking
-    if (lvl<VOL_THRESHOLD_1) {
-      drawShape(mouth[0], pixels.Color(28,172,247));
-    }
-    else {
-      if (lvl<VOL_THRESHOLD_2) {
-           drawShape(mouth[1], pixels.Color(28,172,247)); 
+    // only display a mouth if not conserving power
+    if (powerConserveTimer > 0) {
+      // otherwise process talking
+      if (lvl<VOL_THRESHOLD_1) {
+        // draw the closed mouth shape
+        drawShape(mouth[0], pixels.Color(28,172,247));
+
+        // and decrement the power conserve timer if no noise detected for a while
+        powerConserveTimer = MAX(0, (powerConserveTimer-1)); 
       }
       else {
-        if (lvl<VOL_THRESHOLD_3) {
-           drawShape(mouth[2], pixels.Color(28,172,247)); 
+        // higher noise level, so reset the power conserve timer
+        powerConserveTimer = MAX_POWER_OFF_TIME;
+
+        // and display mouth shape
+        if (lvl<VOL_THRESHOLD_2) {
+             drawShape(mouth[1], pixels.Color(28,172,247)); 
         }
-        else{
-           drawShape(mouth[3], pixels.Color(28,172,247)); 
+        else {
+          if (lvl<VOL_THRESHOLD_3) {
+             drawShape(mouth[2], pixels.Color(28,172,247)); 
+          }
+          else{
+             drawShape(mouth[3], pixels.Color(28,172,247)); 
+          }
         }
+      }
+    }
+    else {
+      // turn off the mouth
+      clear();
+      
+      // look to re-enable the LEDs
+      if (lvl > VOL_THRESHOLD_1) {
+        powerConserveTimer = MAX_POWER_OFF_TIME;
       }
     }
   }
